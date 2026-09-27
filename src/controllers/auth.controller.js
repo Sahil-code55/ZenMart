@@ -128,6 +128,35 @@ const login = async(req,res)=>{
 };
 
 
+const getMe = async (req, res) => {
+  try {
+    // We don't want either returned to the frontend.
+    //so, .select("-password -refreshToken")
+    //Select everything except password and refreshToken.
+    const user = await User.findById(req.user.userId).select(
+      "-password -refreshToken"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error("Get me error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 
 
@@ -136,4 +165,5 @@ const login = async(req,res)=>{
 
 
 
-export { register,login };
+
+export { register,login,getMe };
