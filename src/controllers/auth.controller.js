@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs"
 import User  from  "../models/user.model.js"
 import { generateAccessToken,
   generateRefreshToken} from "../utils/token.js"
+  import jwt from "jsonwebtoken"
 
 
 
@@ -158,12 +159,79 @@ const getMe = async (req, res) => {
   }
 };
 
+const refreshAccessToken = async (req, res) => {
+  try {
+        const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token required",
+      });
+    }
+   
+      const decoded = jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await User.findById(decoded.userId);
+
+     if (!user || user.refreshToken !== refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+     const accessToken = generateAccessToken(user._id);
+
+    return res.status(200).json({
+      success: true,
+      accessToken,
+    });
+
+  } catch (error) {
+    
+     return res.status(401).json({
+      success: false,
+      message: "Invalid or expired refresh token",
+    });
+
+  }
+}
+
+const logout = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+
+    if (user) {
+      user.refreshToken = null;
+      await user.save();
+    }
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  } catch (error) {
+    console.error("Logout error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 
 
 
 
-
-
-
-export { register,login,getMe };
+export { register,login,getMe , refreshAccessToken, logout};
