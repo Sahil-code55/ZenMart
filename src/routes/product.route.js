@@ -1,25 +1,53 @@
 import express from "express"
 import  { createProduct, getProducts ,getProductById,updateProduct,deleteProduct} from "../controllers/product.controller.js";
 import authenticate from "../middlewares/auth.middleware.js";
+import validate from "../middlewares/validate.middleware.js";
+import { productIdValidator, productValidator } from "../validators/product.validator.js";
+
 
 
 const router = express.Router();
 
 
-// public routes
+// <==========================================public routes==============================================>
 
 router.get("/", getProducts);
 
-router.get("/:id", getProductById);
+router.get(
+  "/:id",
+  productIdValidator,
+  validate,
+  getProductById
+);
 
 
 
-// Protected
-router.post("/", authenticate, createProduct);
+// <========================================== Protected Route==============================================>
+router.post(
+  "/",
+  authenticate,
+  productValidator,
+  validate,
+  createProduct
+);
 
-router.put("/:id", authenticate, updateProduct);
 
-router.delete("/:id", authenticate, deleteProduct);
+router.put(
+  "/:id",
+  authenticate,
+  productIdValidator,
+  productValidator,
+  validate,
+  updateProduct
+);
+
+router.delete(
+  "/:id",
+  authenticate,
+  productIdValidator,
+  validate,
+  deleteProduct
+);
 
 
 
