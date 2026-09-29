@@ -1,4 +1,4 @@
-import logo from "../assets/ZenMart-logo";
+import logo from "../assets/ZenLogo2.png"
 import { Link } from "react-router-dom";
 
 function Logo({ className = "w-36" }) {
