@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
-import api from "../services/api";
+
 import Logo from "../components/Logo.jsx";
+import { useAuth } from "../context/AuthContext";
 
 function Register({ onSwitch }) {
   const {
@@ -14,19 +15,21 @@ function Register({ onSwitch }) {
     mode: "onBlur",
   });
 
+   const { register: registerUser } = useAuth();
+
   const password = watch("password");
 
   const onSubmit = async (data) => {
     try {
-      const { confirmPassword, ...registerData } = data;
 
-      await api.post("/auth/register", registerData);
-
+      // const { confirmPassword, ...registerData } = data;
+      await registerUser(data);
       reset();
-
       // Switch back to login after successful registration
       onSwitch();
-    } catch (error) {
+
+    } 
+    catch (error) {
       setError("root", {
         message:
           error.response?.data?.message ||

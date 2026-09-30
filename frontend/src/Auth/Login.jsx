@@ -2,9 +2,12 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import Logo from "../components/Logo.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function Login({ onSwitch }) {
+
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const {
     register,
@@ -16,15 +19,14 @@ function Login({ onSwitch }) {
   });
 
   const onSubmit = async (data) => {
+
     try {
-      const response = await api.post("/auth/login", data);
-
-      const { accessToken } = response.data;
-
-      localStorage.setItem("accessToken", accessToken);
-
+      
+      await login(data);
       navigate("/products");
+
     } catch (error) {
+      
       setError("root", {
         message:
           error.response?.data?.message ||
