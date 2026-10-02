@@ -1431,6 +1431,18 @@ Example frontend URL:
 http://localhost:5173
 ```
 
+## Vercel deployment
+
+The frontend uses `/api` in production, which keeps requests on the deployed
+site's origin. The Vercel rewrite in `vercel.json` forwards `/api/*` requests
+to the backend service. If you deploy the frontend and backend separately,
+set `VITE_API_URL` in the frontend deployment to the backend's full API URL
+(for example, `https://your-backend.example.com/api`) and set the backend's
+`CLIENT_URL` to the frontend's deployed origin. Never set `VITE_API_URL` to a
+localhost URL in Vercel; production builds ignore localhost API URLs and use
+the `/api` rewrite instead. Redeploy the frontend after changing build
+environment variables.
+
 ---
 
 # 🧪 Request Lifecycle

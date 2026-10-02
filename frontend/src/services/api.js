@@ -5,8 +5,32 @@ import {
   clearAccessToken,
 } from "./token";
 
+// In production, use the same-origin /api rewrite configured in vercel.json.
+// Local development still talks directly to the Express server.
+const configuredApiURL = import.meta.env.VITE_API_URL;
+let configuredApiHost = "";
+
+if (configuredApiURL) {
+  try {
+    configuredApiHost = new URL(configuredApiURL).hostname;
+  } catch {
+    // Relative URLs are valid API base URLs and have no host to check.
+  }
+}
+
+const configuredApiIsLocal =
+  configuredApiHost === "localhost" ||
+  configuredApiHost === "127.0.0.1" ||
+  configuredApiHost === "::1";
+
+const apiBaseURL =
+  import.meta.env.PROD && configuredApiIsLocal
+    ? "/api"
+    : configuredApiURL ||
+      (import.meta.env.PROD ? "/api" : "http://localhost:5000/api");
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL: apiBaseURL,
   withCredentials: true,
 });
 
