@@ -1,16 +1,22 @@
-import { createContext, useContext,  useState,} from "react";
-import {getProducts,getProductById,createProduct,updateProduct,deleteProduct,} from "../api/product.api";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useState } from "react";
+import {
+  getProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "../api/product.api";
 
 const ProductContext = createContext(null);
 
 export function ProductProvider({ children }) {
-
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // Fetch all products
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -21,27 +27,27 @@ export function ProductProvider({ children }) {
     } catch (error) {
       setError(
         error.response?.data?.message ||
-          "Unable to load products. Please try again."
+          "Failed to load products."
       );
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Get single product
-  const fetchProduct = async (id) => {
+  const fetchProduct = useCallback(async (id) => {
     return await getProductById(id);
-  };
+  }, []);
 
-  // Add product
+  // Add product (prepend so newest appears at top matching backend sort)
   const addProduct = async (productData) => {
     const data = await createProduct(productData);
 
     const newProduct = data.product || data;
 
     setProducts((currentProducts) => [
-      ...currentProducts,
       newProduct,
+      ...currentProducts,
     ]);
 
     return newProduct;
@@ -83,6 +89,7 @@ export function ProductProvider({ children }) {
     throw error;
   }
 };
+
 
 
   return (

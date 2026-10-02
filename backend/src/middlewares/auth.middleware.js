@@ -1,32 +1,31 @@
-import jwt from "jsonwebtoken"
-
+import jwt from "jsonwebtoken";
+import config from "../config/config.js";
 
 const authenticate = (req, res, next) => {
-    try {
-            
+  try {
     const authHeader = req.headers.authorization;
 
-        if (!authHeader) {
+    if (!authHeader) {
       return res.status(401).json({
         success: false,
         message: "Access token required",
       });
     }
 
-        const parts = authHeader.split(" ");
+    const parts = authHeader.split(" ");
 
     if (parts.length !== 2 || parts[0] !== "Bearer") {
       return res.status(401).json({
         success: false,
         message: "Invalid authorization format",
       });
-     }
+    }
 
     const token = parts[1];
 
     const decoded = jwt.verify(
       token,
-      process.env.ACCESS_TOKEN_SECRET
+      config.ACCESS_TOKEN_SECRET
     );
 
     req.user = decoded;

@@ -1,10 +1,25 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import Login from "../Auth/Login.jsx";
 import Register from "../Auth/Register.jsx";
 import Logo from "../components/Logo.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function Auth() {
   const [isRegister, setIsRegister] = useState(false);
+  const { user, authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070A09]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1E3028] border-t-[#34D399]" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/products" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#070A09] px-4 py-4 text-white sm:px-6 lg:px-8">

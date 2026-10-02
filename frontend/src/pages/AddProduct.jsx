@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 import Navbar from "../components/Navbar";
 import { useProducts } from "../context/ProductContext";
@@ -38,15 +39,17 @@ function AddProduct() {
       await addProduct(productData);
 
       reset();
-
+      toast.success("Product created successfully!");
       navigate("/products");
     } catch (error) {
+      const errorMessage =
+        error.response?.data?.message ||
+        "Unable to create product. Please try again.";
       setError("root", {
         type: "server",
-        message:
-          error.response?.data?.message ||
-          "Unable to create product. Please try again.",
+        message: errorMessage,
       });
+      toast.error(errorMessage);
     }
   };
 
@@ -74,13 +77,6 @@ function AddProduct() {
           
         </div>
          
-
-          {/* <p className="mb-2 text-sm font-medium uppercase tracking-wider text-[#34D399]">
-            ZenMart Store
-          </p> */}
-
-
-        
         </div>
 
 
@@ -136,10 +132,7 @@ function AddProduct() {
               placeholder="Describe your product..."
               {...register("description", {
                 required: "Description is required",
-                minLength: {
-                  value: 10,
-                  message: "Description must be at least 10 characters",
-                },
+               
               })}
               className="w-full resize-none rounded-xl border border-[#1E3028] bg-[#0D1512] px-4 py-3 text-sm outline-none transition placeholder:text-[#59665F] focus:border-[#059669] focus:ring-1 focus:ring-[#059669]"
             />
@@ -198,6 +191,7 @@ function AddProduct() {
               <input
                 type="number"
                 min="0"
+                step="1"
                 placeholder="0"
                 {...register("stock", {
                   required: "Stock is required",

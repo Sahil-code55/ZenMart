@@ -1,35 +1,42 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import Navbar from "../components/Navbar";
 import { useProducts } from "../context/ProductContext";
 import ProductCard from "../components/ProductCard";
 
-
 function Products() {
-const { products,loading,error,fetchProducts,removeProduct,}= useProducts();
+  const { products, loading, error, fetchProducts, removeProduct } = useProducts();
+  const [deleteProductId, setDeleteProductId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
- 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
 
+  const handleDelete = (id) => {
+    setDeleteProductId(id);
+  };
 
-const handleDelete = async (id) => {
-  const confirmed = window.confirm(
-    "Are you sure you want to delete this product?"
-  );
+  const confirmDelete = async () => {
+    if (!deleteProductId) return;
 
-  if (!confirmed) return;
+    try {
+      setIsDeleting(true);
 
-  try {
-    await removeProduct(id);
-  } catch (error) {
-    console.error(
-      error.response?.data?.message ||
-        "Unable to delete product. Please try again."
-    );
-  }
-};
+      await removeProduct(deleteProductId);
+      toast.success("Product deleted successfully!");
+      setDeleteProductId(null);
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message ||
+        "Unable to delete product. Please try again.";
+      console.error(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#070A09] text-[#F9FAFB]">
@@ -133,6 +140,48 @@ const handleDelete = async (id) => {
         )}
 
       </section>
+      {deleteProductId && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-5 backdrop-blur-sm">
+    <div className="w-full max-w-sm rounded-2xl border border-[#1E3028] bg-[#111217] p-6 shadow-2xl shadow-black/40">
+
+      {/* Icon */}
+      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#211111] text-lg text-[#F87171]">
+        🗑
+      </div>
+
+      {/* Content */}
+      <h2 className="text-lg font-semibold text-white">
+        Delete Product?
+      </h2>
+
+      <p className="mt-2 text-sm leading-5 text-gray-400">
+        Are you sure you want to delete this product? This action cannot
+        be undone.
+      </p>
+
+      {/* Actions */}
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => setDeleteProductId(null)}
+          className="rounded-xl border border-[#292c36] bg-[#0D1512] px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-[#3a3f4b] hover:text-white"
+        >
+          Cancel
+        </button>
+
+       <button
+        type="button"
+        onClick={confirmDelete}
+        disabled={isDeleting}
+        className="rounded-xl bg-[#B91C1C] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#DC2626]       disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isDeleting ? "Deleting..." : "Yes, Delete"}
+      </button>
+      </div>
+
+    </div>
+  </div>
+)}
 
     </main>
   );

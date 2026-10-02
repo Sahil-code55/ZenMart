@@ -1,16 +1,21 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 function ProductCard({ product, onDelete }) {
+  const [imageError, setImageError] = useState(false);
+  const productId = product._id || product.id;
+
   return (
     <article className="group overflow-hidden rounded-2xl border border-[#1E3028] bg-[#111A16] transition duration-300 hover:-translate-y-1 hover:border-[#29513F] hover:bg-[#17231E]">
 
       {/* Image */}
       <div className="relative flex h-52 items-center justify-center overflow-hidden bg-[#0D1512]">
 
-        {product.image ? (
+        {product.image && !imageError ? (
           <img
             src={product.image}
             alt={product.name}
+            onError={() => setImageError(true)}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
           />
         ) : (
@@ -64,7 +69,7 @@ function ProductCard({ product, onDelete }) {
         <div className="grid grid-cols-2 gap-2">
 
           <Link
-            to={`/products/edit/${product._id}`}
+            to={`/products/edit/${productId}`}
             className="rounded-lg border border-[#294238] bg-[#10231D] px-3 py-2.5 text-center text-sm font-medium text-[#D1FAE5] transition hover:border-[#34D399] hover:bg-[#17352A]"
           >
             Edit
@@ -72,7 +77,7 @@ function ProductCard({ product, onDelete }) {
 
           <button
             type="button"
-            onClick={() => onDelete(product._id)}
+            onClick={() => onDelete(productId)}
             className="rounded-lg border border-[#512222] bg-[#211111] px-3 py-2.5 text-sm font-medium text-[#FCA5A5] transition hover:border-[#F87171] hover:bg-[#321515]"
           >
             Delete

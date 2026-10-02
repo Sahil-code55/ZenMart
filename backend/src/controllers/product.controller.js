@@ -82,9 +82,12 @@ const getProductById = async (req, res) => {
 
 const updateProduct = async (req, res) => {
   try {
+    const { name, description, price, stock, category, image } = req.body;
+    const updateData = { name, description, price, stock, category, image };
+
     const product = await ProductModel.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       {
         new: true,
         runValidators: true,
