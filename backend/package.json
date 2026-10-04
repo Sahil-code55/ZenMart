@@ -1,24 +1,13 @@
 {
-  "name": "zenmart",
+  "name": "zenmart-backend",
   "version": "1.0.0",
+  "private": true,
+  "type": "module",
   "main": "server.js",
-  "type":"module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "start": "node server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Sahil-code55/ZenMart.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Sahil-code55/ZenMart/issues"
-  },
-  "homepage": "https://github.com/Sahil-code55/ZenMart#readme",
-  "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
