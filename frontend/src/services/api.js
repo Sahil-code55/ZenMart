@@ -1,36 +1,14 @@
 import axios from "axios";
+
 import {
   getAccessToken,
   setAccessToken,
   clearAccessToken,
 } from "./token";
 
-// In production, use the same-origin /api rewrite configured in vercel.json.
-// Local development still talks directly to the Express server.
-const configuredApiURL = import.meta.env.VITE_API_URL;
-let configuredApiHost = "";
-
-if (configuredApiURL) {
-  try {
-    configuredApiHost = new URL(configuredApiURL).hostname;
-  } catch {
-    // Relative URLs are valid API base URLs and have no host to check.
-  }
-}
-
-const configuredApiIsLocal =
-  configuredApiHost === "localhost" ||
-  configuredApiHost === "127.0.0.1" ||
-  configuredApiHost === "::1";
-
-const apiBaseURL =
-  import.meta.env.PROD && configuredApiIsLocal
-    ? "/api"
-    : configuredApiURL ||
-      (import.meta.env.PROD ? "/api" : "http://localhost:5000/api");
-
 const api = axios.create({
-  baseURL: apiBaseURL,
+  baseURL:
+    import.meta.env.VITE_API_URL,
   withCredentials: true,
 });
 
@@ -46,10 +24,6 @@ const notifyRefreshSubscribers = (token) => {
   refreshSubscribers = [];
 };
 
-/*
-  REQUEST INTERCEPTOR
-  Automatically attaches access token
-*/
 api.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
@@ -63,11 +37,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-
-/*
-  RESPONSE INTERCEPTOR
-  Handles expired access tokens
-*/
 api.interceptors.response.use(
   (response) => response,
 
@@ -85,11 +54,6 @@ api.interceptors.response.use(
 
     originalRequest._retry = true;
 
-    /*
-      If another request is already refreshing,
-      wait for that refresh instead of making
-      another refresh request.
-    */
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         subscribeToRefresh((token) => {
@@ -120,14 +84,12 @@ api.interceptors.response.use(
         `Bearer ${newAccessToken}`;
 
       return api(originalRequest);
-
     } catch (refreshError) {
       clearAccessToken();
 
       notifyRefreshSubscribers(null);
 
       return Promise.reject(refreshError);
-
     } finally {
       isRefreshing = false;
     }
