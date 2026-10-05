@@ -8,7 +8,7 @@ import {
 
 const api = axios.create({
   baseURL:
-    import.meta.env.API_URL,
+    import.meta.env.API_URL || '/api',
   withCredentials: true,
 });
 
