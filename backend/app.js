@@ -10,12 +10,30 @@ import logger from "./src/utils/logger.js";
 
 const app = express();
 
+// ─── Allowed Frontend Origins ─────────────────────────────────────────────────
+// Add all your Vercel deployment URLs here
+const ALLOWED_ORIGINS = [
+  config.FRONTEND_URL,
+  "https://zen-mart-woad.vercel.app",
+  "https://zen-mart-okjp.vercel.app",
+].filter(Boolean); // Remove undefined/null entries
+
 // ─── Core Middlewares ────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: config.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. Postman, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        logger.warn("CORS", `Blocked request from origin: ${origin}`);
+        callback(new Error(`CORS: Origin '${origin}' is not allowed`));
+      }
+    },
     credentials: true,
   })
 );

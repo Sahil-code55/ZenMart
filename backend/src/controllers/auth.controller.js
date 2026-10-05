@@ -177,24 +177,62 @@ const getMe = async (req, res) => {
 const refreshAccessToken = async (req, res) => {
   logger.info("AuthController", "Token refresh attempt");
 
+  // Diagnostic: log all cookies received (helps debug if cookie isn't being sent)
+  logger.debug("AuthController", `Cookies received: ${JSON.stringify(Object.keys(req.cookies || {}))}`);
+
   try {
     const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
-      logger.warn("AuthController", "Token refresh failed: no refresh token cookie");
+      logger.warn(
+        "AuthController",
+        "Token refresh FAILED ❌ — No 'refreshToken' cookie in request. " +
+        "Likely cause: cookie not sent cross-origin (check sameSite/secure settings) or user never logged in."
+      );
       return res.status(401).json({
         success: false,
         message: "Refresh token required",
       });
     }
 
-    const decoded = jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET);
+    logger.debug("AuthController", `refreshToken cookie found, verifying...`);
+
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET);
+    } catch (jwtError) {
+      if (jwtError.name === "TokenExpiredError") {
+        logger.warn("AuthController", `Token refresh FAILED ❌ — Refresh token EXPIRED at: ${jwtError.expiredAt}`);
+        return res.status(401).json({
+          success: false,
+          message: "Refresh token has expired, please log in again",
+        });
+      }
+      logger.warn("AuthController", `Token refresh FAILED ❌ — JWT invalid: ${jwtError.message}`);
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
     logger.debug("AuthController", `Refresh token decoded → User ID: ${decoded.userId}`);
 
     const user = await User.findById(decoded.userId);
 
-    if (!user || user.refreshToken !== refreshToken) {
-      logger.warn("AuthController", `Token refresh failed: token mismatch or user not found → ID: ${decoded.userId}`);
+    if (!user) {
+      logger.warn("AuthController", `Token refresh FAILED ❌ — User not found in DB → ID: ${decoded.userId}`);
+      return res.status(401).json({
+        success: false,
+        message: "User no longer exists",
+      });
+    }
+
+    if (user.refreshToken !== refreshToken) {
+      logger.warn(
+        "AuthController",
+        `Token refresh FAILED ❌ — Token mismatch for user: ${user.email}. ` +
+        "Token may have been reused or already rotated (possible session hijack attempt)."
+      );
       return res.status(401).json({
         success: false,
         message: "Invalid refresh token",
@@ -203,14 +241,14 @@ const refreshAccessToken = async (req, res) => {
 
     const accessToken = generateAccessToken(user._id);
 
-    logger.success("AuthController", `Access token refreshed → User: ${user.email}`);
+    logger.success("AuthController", `Access token refreshed ✅ → User: ${user.email}`);
 
     return res.status(200).json({
       success: true,
       accessToken,
     });
   } catch (error) {
-    logger.warn("AuthController", `Token refresh error: ${error.message}`);
+    logger.error("AuthController", `Token refresh unexpected error: ${error.message}`, error);
     return res.status(401).json({
       success: false,
       message: "Invalid or expired refresh token",
