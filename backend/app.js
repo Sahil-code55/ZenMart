@@ -4,9 +4,13 @@ import cookieParser from "cookie-parser";
 import config from "./src/config/config.js";
 import authRoutes from "./src/routes/auth.routes.js";
 import productRoutes from "./src/routes/product.route.js";
+import requestLogger from "./src/middlewares/requestLogger.middleware.js";
+import errorHandler from "./src/middlewares/errorHandler.middleware.js";
+import logger from "./src/utils/logger.js";
 
 const app = express();
 
+// ─── Core Middlewares ────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(cookieParser());
 app.use(
@@ -16,30 +20,30 @@ app.use(
   })
 );
 
+// ─── HTTP Request Logger ─────────────────────────────────────────────────────
+app.use(requestLogger);
+
+// ─── Health Check ────────────────────────────────────────────────────────────
 app.get("/", (req, res) => {
   res.json({
     message: "E-commerce API is running",
   });
 });
 
+// ─── Routes ──────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 
-// 404 Handler
+// ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
+  logger.warn("Router", `404 - Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
-    message: "Route not found",
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
   });
 });
 
-// Global JSON error handler
-app.use((err, req, res, next) => {
-  console.error("Unhandled error:", err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal server error",
-  });
-});
+// ─── Global Error Handler ─────────────────────────────────────────────────────
+app.use(errorHandler);
 
 export default app;

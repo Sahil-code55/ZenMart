@@ -6,6 +6,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/token.js";
+import logger from "../utils/logger.js";
 
 const normalizeEmail = (email = "") => email.trim().toLowerCase();
 
@@ -16,13 +17,19 @@ const createUserResponse = (user) => ({
   createdAt: user.createdAt,
 });
 
+// ─── Register ─────────────────────────────────────────────────────────────────
 const register = async (req, res) => {
+  logger.info("AuthController", "Register attempt");
+
   try {
     const { name, email, password } = req.body;
     const trimmedName = String(name || "").trim();
     const normalizedEmail = normalizeEmail(email);
 
+    logger.debug("AuthController", `Register payload → name: "${trimmedName}", email: "${normalizedEmail}"`);
+
     if (!trimmedName || !normalizedEmail || !password) {
+      logger.warn("AuthController", "Register failed: missing required fields");
       return res.status(400).json({
         success: false,
         message: "Name, email, and password are required",
@@ -32,6 +39,7 @@ const register = async (req, res) => {
     const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
+      logger.warn("AuthController", `Register failed: email already exists → ${normalizedEmail}`);
       return res.status(409).json({
         success: false,
         message: "Email already registered",
@@ -46,13 +54,15 @@ const register = async (req, res) => {
       password: hashedPassword,
     });
 
+    logger.success("AuthController", `User registered successfully → ID: ${user._id}, Email: ${normalizedEmail}`);
+
     return res.status(201).json({
       success: true,
       message: "User registered successfully",
       user: createUserResponse(user),
     });
   } catch (error) {
-    console.error("Register error:", error.message);
+    logger.error("AuthController", `Register error: ${error.message}`, error);
 
     return res.status(500).json({
       success: false,
@@ -61,14 +71,20 @@ const register = async (req, res) => {
   }
 };
 
+// ─── Login ────────────────────────────────────────────────────────────────────
 const login = async (req, res) => {
+  logger.info("AuthController", "Login attempt");
+
   try {
     const { email, password } = req.body;
     const normalizedEmail = normalizeEmail(email);
 
+    logger.debug("AuthController", `Login attempt for email: "${normalizedEmail}"`);
+
     const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
+      logger.warn("AuthController", `Login failed: user not found → ${normalizedEmail}`);
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
@@ -78,6 +94,7 @@ const login = async (req, res) => {
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
     if (!isPasswordCorrect) {
+      logger.warn("AuthController", `Login failed: wrong password for → ${normalizedEmail}`);
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
@@ -97,6 +114,8 @@ const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    logger.success("AuthController", `Login successful → User ID: ${user._id}, Email: ${normalizedEmail}`);
+
     return res.status(200).json({
       success: true,
       message: "Login successful",
@@ -104,7 +123,7 @@ const login = async (req, res) => {
       user: createUserResponse(user),
     });
   } catch (error) {
-    console.error("Login error:", error.message);
+    logger.error("AuthController", `Login error: ${error.message}`, error);
 
     return res.status(500).json({
       success: false,
@@ -113,11 +132,15 @@ const login = async (req, res) => {
   }
 };
 
+// ─── Get Me ───────────────────────────────────────────────────────────────────
 const getMe = async (req, res) => {
   try {
     const userId = req.user?.userId;
 
+    logger.debug("AuthController", `getMe → User ID: ${userId}`);
+
     if (!userId) {
+      logger.warn("AuthController", "getMe failed: no userId in token");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -127,18 +150,21 @@ const getMe = async (req, res) => {
     const user = await User.findById(userId).select("-password -refreshToken");
 
     if (!user) {
+      logger.warn("AuthController", `getMe failed: user not found → ID: ${userId}`);
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
+    logger.info("AuthController", `getMe success → User: ${user.email}`);
+
     return res.status(200).json({
       success: true,
       user: createUserResponse(user),
     });
   } catch (error) {
-    console.error("Get me error:", error.message);
+    logger.error("AuthController", `getMe error: ${error.message}`, error);
 
     return res.status(500).json({
       success: false,
@@ -147,11 +173,15 @@ const getMe = async (req, res) => {
   }
 };
 
+// ─── Refresh Access Token ─────────────────────────────────────────────────────
 const refreshAccessToken = async (req, res) => {
+  logger.info("AuthController", "Token refresh attempt");
+
   try {
     const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
+      logger.warn("AuthController", "Token refresh failed: no refresh token cookie");
       return res.status(401).json({
         success: false,
         message: "Refresh token required",
@@ -159,9 +189,12 @@ const refreshAccessToken = async (req, res) => {
     }
 
     const decoded = jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET);
+    logger.debug("AuthController", `Refresh token decoded → User ID: ${decoded.userId}`);
+
     const user = await User.findById(decoded.userId);
 
     if (!user || user.refreshToken !== refreshToken) {
+      logger.warn("AuthController", `Token refresh failed: token mismatch or user not found → ID: ${decoded.userId}`);
       return res.status(401).json({
         success: false,
         message: "Invalid refresh token",
@@ -170,11 +203,14 @@ const refreshAccessToken = async (req, res) => {
 
     const accessToken = generateAccessToken(user._id);
 
+    logger.success("AuthController", `Access token refreshed → User: ${user.email}`);
+
     return res.status(200).json({
       success: true,
       accessToken,
     });
   } catch (error) {
+    logger.warn("AuthController", `Token refresh error: ${error.message}`);
     return res.status(401).json({
       success: false,
       message: "Invalid or expired refresh token",
@@ -182,7 +218,10 @@ const refreshAccessToken = async (req, res) => {
   }
 };
 
+// ─── Logout ───────────────────────────────────────────────────────────────────
 const logout = async (req, res) => {
+  logger.info("AuthController", "Logout attempt");
+
   try {
     let userId = req.user?.userId;
 
@@ -193,13 +232,16 @@ const logout = async (req, res) => {
           config.REFRESH_TOKEN_SECRET
         );
         userId = decoded.userId;
+        logger.debug("AuthController", `Logout: resolved user from refresh token → ID: ${userId}`);
       } catch {
         // Expired/invalid refresh token, proceed to clear cookie
+        logger.debug("AuthController", "Logout: refresh token invalid/expired, clearing cookie anyway");
       }
     }
 
     if (userId) {
       await User.findByIdAndUpdate(userId, { refreshToken: null });
+      logger.info("AuthController", `Refresh token cleared for user → ID: ${userId}`);
     }
 
     res.clearCookie("refreshToken", {
@@ -208,12 +250,14 @@ const logout = async (req, res) => {
       sameSite: config.NODE_ENV === "production" ? "none" : "strict",
     });
 
+    logger.success("AuthController", `Logout successful → User ID: ${userId || "unknown"}`);
+
     return res.status(200).json({
       success: true,
       message: "Logout successful",
     });
   } catch (error) {
-    console.error("Logout error:", error.message);
+    logger.error("AuthController", `Logout error: ${error.message}`, error);
 
     return res.status(500).json({
       success: false,
